@@ -33,6 +33,8 @@ public class sus {
                     System.out.println("Line " + (i + 1) + ": " + tokens.get(i));
                 }
             }
+
+            System.out.println(tokens);
             
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());

@@ -47,13 +47,15 @@ public class lexer {
 
     private ArrayList<ArrayList<ArrayList<String>>> lineTokens = new ArrayList<>();
     
-    private void addToken(int line, String type, String value) {
+    private void addToken(int line, int column, String type, String value) {
         while (lineTokens.size() <= line) {
             lineTokens.add(new ArrayList<>());
         }
         ArrayList<String> token = new ArrayList<>();
         token.add(type);
         token.add(value);
+        token.add(String.valueOf(line));
+        token.add(String.valueOf(column));
         lineTokens.get(line).add(token);
     }
     
@@ -68,12 +70,15 @@ public class lexer {
             }
             
             int i = 0;
+            int columnCount = 0;
             while (i < line.length()) {
                 // Skip whitespace
                 while (i < line.length() && Character.isWhitespace(line.charAt(i))) {
                     i++;
                 }
                 if (i >= line.length()) break;
+                
+                int tokenStartCol = columnCount;
                 
                 // Check for string literals
                 if (line.charAt(i) == '"' || line.charAt(i) == '\'') {
@@ -86,23 +91,27 @@ public class lexer {
                         i++;
                     }
                     if (i < line.length()) token += line.charAt(i++);
-                    addToken(lineNum, "LITERAL", token);
+                    addToken(lineNum, columnCount, "LITERAL", token);
+                    columnCount++;
                 } 
                 // Check for two-character operators
                 else if (i + 1 < line.length() && OPERATORS.containsKey(line.substring(i, i + 2))) {
                     String op = line.substring(i, i + 2);
-                    addToken(lineNum, "OPERATOR", op);
+                    addToken(lineNum, columnCount, "OPERATOR", op);
                     i += 2;
+                    columnCount++;
                 }
                 // Check for single-character operators
                 else if (OPERATORS.containsKey(String.valueOf(line.charAt(i)))) {
-                    addToken(lineNum, "OPERATOR", String.valueOf(line.charAt(i)));
+                    addToken(lineNum, columnCount, "OPERATOR", String.valueOf(line.charAt(i)));
                     i++;
+                    columnCount++;
                 }
                 // Check for separators
                 else if (SEPARATORS.containsKey(String.valueOf(line.charAt(i)))) {
-                    addToken(lineNum, "SEPARATOR", String.valueOf(line.charAt(i)));
+                    addToken(lineNum, columnCount, "SEPARATOR", String.valueOf(line.charAt(i)));
                     i++;
+                    columnCount++;
                 }
                 // Check for numbers
                 else if (Character.isDigit(line.charAt(i))) {
@@ -111,7 +120,8 @@ public class lexer {
                         token += line.charAt(i);
                         i++;
                     }
-                    addToken(lineNum, "LITERAL", token);
+                    addToken(lineNum, columnCount, "LITERAL", token);
+                    columnCount++;
                 }
                 // Check for identifiers and keywords
                 else if (Character.isLetter(line.charAt(i)) || line.charAt(i) == '_') {
@@ -122,10 +132,11 @@ public class lexer {
                     }
                     
                     if (KEYWORDS.containsKey(token.toLowerCase())) {
-                        addToken(lineNum, "KEYWORD", token);
+                        addToken(lineNum, columnCount, "KEYWORD", token);
                     } else {
-                        addToken(lineNum, "IDENTIFIER", token);
+                        addToken(lineNum, columnCount, "IDENTIFIER", token);
                     }
+                    columnCount++;
                 } else {
                     i++;
                 }
@@ -139,25 +150,36 @@ public class lexer {
         return lineTokens;
     }
     
+    
     public void displayTokens() {
         System.out.println("[");
+        int maxLines = Math.min(lineTokens.size(), 100);
+        int lineWidth = String.valueOf(maxLines).length() + 1;
+        
         for (int i = 0; i < lineTokens.size(); i++) {
-            System.out.print("    [");
+            String lineNum = String.format("%" + lineWidth + "d", i + 1);
+            System.out.print("    " + lineNum + " [");
             int tokenCount = lineTokens.get(i).size();
             int columns = 4;
             
-            // Display 4 columns per row
+            // Display up to 4 tokens per row with line and column info
             for (int col = 0; col < columns; col++) {
                 System.out.print("[");
                 if (col < tokenCount) {
                     ArrayList<String> token = lineTokens.get(i).get(col);
-                    System.out.print(token.get(0) + ": " + token.get(1));
+                    String type = token.get(0);
+                    String value = token.get(1);
+                    String line = token.get(2);
+                    String column = token.get(3);
+                    System.out.print(type + ": " + value + " (L:" + line + " C:" + column + ")");
                 }
                 System.out.print("]");
                 if (col < columns - 1) System.out.print(", ");
             }
             System.out.println("], line " + (i + 1));
         }
+        
+        // Print column headers
         System.out.println("     1 2 3 4");
         System.out.println("] one program");
     }
